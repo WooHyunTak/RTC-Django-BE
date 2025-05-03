@@ -51,15 +51,8 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "common.middlewares.cookie_jwt.CookieJWTAuthentication",
 ]
-
-REST_FRAMEWORK = {
-    "DEFAULT_AUTHENTICATION_CLASSES": (
-        "common.middlewares.cookie_jwt.CookieJWTAuthentication",  # 쿠키 우선
-        "rest_framework_simplejwt.authentication.JWTAuthentication",  # 헤더 fallback
-    ),
-    "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
-}
 
 PRODUCTION = os.getenv("PRODUCTION")
 

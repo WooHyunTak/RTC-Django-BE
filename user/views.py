@@ -1,4 +1,5 @@
 import logging
+from types import SimpleNamespace
 
 from django.shortcuts import render
 
@@ -28,7 +29,9 @@ class UserMainLoginView(APIView):
             )
             serializer = UserMainSerializer(user_main)
             if user_main.password == login_password:
-                cookie = self.set_token(user_main)
+                tokens = self.token.set_token(user_main)
+                user_main.refresh_token = tokens["refresh_token"]
+                user_main.save()
                 success_response = Response(
                     {
                         "message": "로그인 성공",
@@ -36,12 +39,7 @@ class UserMainLoginView(APIView):
                     },
                     status=status.HTTP_200_OK,
                 )
-                success_response.set_cookie(
-                    key="access_token", value=cookie["access_token"], httponly=True
-                )
-                success_response.set_cookie(
-                    key="refresh_token", value=cookie["refresh_token"], httponly=True
-                )
+                success_response = self.token.set_cookie(success_response, tokens)
                 return success_response
             else:
                 return Response(
@@ -51,25 +49,14 @@ class UserMainLoginView(APIView):
             logger.error(f"UserMainLoginView 오류: {e}")
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-    def set_token(self, user):
-        token = self.token.generate_token(user)
-        access_token = token["access_token"]
-        refresh_token = token["refresh_token"]
-        cookie = {
-            "access_token": access_token,
-            "refresh_token": refresh_token,
-        }
-        return cookie
-
 
 class UserGetMeView(APIView):
     def get(self, request):
         try:
             # 미들웨어에서 설정한 token_user가 있는지 확인
-            if hasattr(request, "user"):
-                print("request.user", request.user)
+            if hasattr(request, "token_user"):
                 user_main = UserMain.objects.select_related("userprofile").get(
-                    id=request.user.id
+                    id=request.token_user.id
                 )
                 serializer = UserMainSerializer(user_main)
                 return Response(serializer.data, status=status.HTTP_200_OK)
@@ -109,27 +96,16 @@ class UserSignUpView(APIView):
                             user=user_main,
                             image_url=request.data.get("imageUrl", None),
                         )
-                    cookie = self.set_token(user_main)
                     data = serializer.data
                     data.pop("password", None)
                     success_response = Response(
                         {"message": "회원가입 성공", "data": data},
                         status=status.HTTP_201_CREATED,
                     )
-                    success_response.set_cookie(
-                        key="access_token",
-                        value=cookie["access_token"],
-                        httponly=True,
-                        samesite="None",
-                        secure=True,
-                    )
-                    success_response.set_cookie(
-                        key="refresh_token",
-                        value=cookie["refresh_token"],
-                        httponly=True,
-                        samesite="None",
-                        secure=True,
-                    )
+                    tokens = self.token.set_token(user_main)
+                    user_main.refresh_token = tokens["refresh_token"]
+                    user_main.save()
+                    success_response = self.token.set_cookie(success_response, tokens)
                     return success_response
                 else:
                     return Response(
@@ -139,12 +115,41 @@ class UserSignUpView(APIView):
             logger.error(f"UserSignUpView 오류: {e}")
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-    def set_token(self, user):
-        token = self.token.generate_token(user)
-        access_token = token["access_token"]
-        refresh_token = token["refresh_token"]
-        cookie = {
-            "access_token": access_token,
-            "refresh_token": refresh_token,
-        }
-        return cookie
+
+class UserRefreshView(APIView):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.token = Token()
+
+    def get(self, request):
+        try:
+            refresh_token = request.COOKIES.get("refresh_token")
+            if not refresh_token:
+                return Response(
+                    {"message": "리프레시 토큰이 없습니다."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            payload_dict = self.token.verify_token(refresh_token)
+            if not payload_dict:
+                return Response(
+                    {"message": "리프레시 토큰이 유효하지 않습니다."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            payload = SimpleNamespace(**payload_dict)
+            user_main = UserMain.objects.get(id=payload.id)
+            if user_main.refresh_token and user_main.refresh_token != refresh_token:
+                return Response(
+                    {"message": "리프레시 토큰이 유효하지 않습니다."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            tokens = self.token.set_token(user_main)
+            response = Response(
+                {"message": "토큰 갱신 성공"},
+                status=status.HTTP_200_OK,
+            )
+            response = self.token.set_cookie(response, tokens)
+            return response
+        except Exception as e:
+            logger.error(f"UserRefreshView 오류: {e}")
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)

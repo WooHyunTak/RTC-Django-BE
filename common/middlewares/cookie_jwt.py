@@ -1,12 +1,26 @@
-from rest_framework_simplejwt.authentication import JWTAuthentication
+from common.utils.tokens import Token
+from types import SimpleNamespace
 
 
-class CookieJWTAuthentication(JWTAuthentication):
+class CookieJWTAuthentication(Token):
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        path = request.path.rstrip("/")
+        if path in ("/api/users/login", "/api/users/signup", "/api/users/refresh"):
+            pass
+        else:
+            self.authenticate(request)
+        return self.get_response(request)
+
     def authenticate(self, request):
-        print("request.COOKIES", request.COOKIES)
         raw_token = request.COOKIES.get("access_token")
         if not raw_token:
             return None
-        validated_token = self.get_validated_token(raw_token)
-        print("validated_token", validated_token)
-        return self.get_user(validated_token), validated_token
+        payload_dict = self.verify_token(raw_token)
+        if not payload_dict:
+            return None
+        payload = SimpleNamespace(**payload_dict)
+        request.token_user = payload
+        return payload
