@@ -1,6 +1,7 @@
 from django.db import models
 
 
+
 class UserMain(models.Model):
     name = models.CharField(
         max_length=255,
@@ -20,6 +21,12 @@ class UserMain(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True, help_text="생성일")
     updated_at = models.DateTimeField(auto_now=True, help_text="수정일")
+    friends = models.ManyToManyField(
+        "self",
+        through="UserFriend",
+        symmetrical=False,
+        related_name="friend_of",
+    )
 
     def __str__(self):
         return self.name
@@ -41,3 +48,17 @@ class UserProfile(models.Model):
 
     class Meta:
         db_table = "user_profile"
+
+class UserFriend(models.Model):
+    from_user = models.ForeignKey(
+        UserMain, related_name="my_friend", on_delete=models.CASCADE
+    )
+    to_user = models.ForeignKey(
+        UserMain, related_name="received_friend", on_delete=models.CASCADE
+    )
+    created_at = models.DateTimeField(auto_now_add=True, help_text="생성일")
+    updated_at = models.DateTimeField(auto_now=True, help_text="수정일")
+
+    class Meta:
+        db_table = "user_friend"
+        unique_together = (("from_user", "to_user"),)
