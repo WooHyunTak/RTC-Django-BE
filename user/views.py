@@ -153,3 +153,20 @@ class UserRefreshView(APIView):
         except Exception as e:
             logger.error(f"UserRefreshView 오류: {e}")
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class UserFriendView(APIView):
+    def get(self, request):
+        try:
+            user_main = UserMain.objects.select_related("userprofile").get(
+                id=request.token_user.id
+            ).my_friend.all()
+            serializer = UserMainSerializer(user_main, many=True)
+            success_response = Response(
+                {"message": "친구 목록 조회 성공", "data": serializer.data},
+                status=status.HTTP_200_OK,
+            )
+            return success_response
+        except Exception as e:
+            logger.error(f"UserFriendView 오류: {e}")
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)

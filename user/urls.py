@@ -1,5 +1,11 @@
 from django.urls import path, include
-from .views import UserMainLoginView, UserSignUpView, UserGetMeView, UserRefreshView
+from .views import (
+    UserMainLoginView,
+    UserSignUpView,
+    UserGetMeView,
+    UserRefreshView,
+    UserFriendView,
+)
 
 app_name = "user"
 urlpatterns = [
@@ -7,4 +13,5 @@ urlpatterns = [
     path("signup/", UserSignUpView.as_view(), name="signup"),
     path("me/", UserGetMeView.as_view(), name="me"),
     path("refresh/", UserRefreshView.as_view(), name="refresh"),
+    path("my-friend/", UserFriendView.as_view(), name="friend"),
 ]
