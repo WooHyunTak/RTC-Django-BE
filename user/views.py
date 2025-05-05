@@ -11,7 +11,7 @@ from rest_framework.response import Response
 from .models import UserMain, UserProfile
 from .serializers import UserMainSerializer, UserMainCreateSerializer
 from common.utils.tokens import Token
-
+from user_channel.serializers import UserChannelSerializer
 logger = logging.getLogger(__name__)
 
 
@@ -160,7 +160,8 @@ class UserFriendView(APIView):
         try:
             user_main = UserMain.objects.select_related("userprofile").get(
                 id=request.token_user.id
-            ).my_friend.all()
+            )
+            user_main = user_main.my_friend.all()
             serializer = UserMainSerializer(user_main, many=True)
             success_response = Response(
                 {"message": "친구 목록 조회 성공", "data": serializer.data},
@@ -170,3 +171,17 @@ class UserFriendView(APIView):
         except Exception as e:
             logger.error(f"UserFriendView 오류: {e}")
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+class UserChannelView(APIView):
+    def get(self, request):
+        try:
+            user_main = UserMain.objects.select_related("userprofile").get(
+                id=request.token_user.id
+            )
+            channels = user_main.channels.all()
+            serializer = UserChannelSerializer(channels, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Exception as e:
+            logger.error(f"UserChannelView 오류: {e}")
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+

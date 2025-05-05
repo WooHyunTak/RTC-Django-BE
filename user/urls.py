@@ -5,6 +5,7 @@ from .views import (
     UserGetMeView,
     UserRefreshView,
     UserFriendView,
+    UserChannelView
 )
 
 app_name = "user"
@@ -14,4 +15,5 @@ urlpatterns = [
     path("me/", UserGetMeView.as_view(), name="me"),
     path("refresh/", UserRefreshView.as_view(), name="refresh"),
     path("my-friend/", UserFriendView.as_view(), name="friend"),
+    path("my-channel/", UserChannelView.as_view(), name="channel"),
 ]
