@@ -4,8 +4,10 @@ from rest_framework.response import Response
 from rest_framework import status
 from .serializers import UserChannelCreateSerializer, UserChannelSerializer
 from .models import UserChannel
-
+from django.conf import settings
 import logging
+from user.models import UserMain
+import base64
 
 logger = logging.getLogger(__name__)
 
@@ -70,3 +72,29 @@ class UserChannelLeaveView(APIView):
         except Exception as e:
             print(f"UserChannelLeaveView 오류: {e}")
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class UserChannelInviteURLView(APIView):
+    def post(self, request, pk):
+        try:
+            invite_user = UserMain.objects.get(id=request.token_user.id)
+            encoded_invite_user = encode_user_id(invite_user.id)
+            channel = UserChannel.objects.get(id=pk)
+            if not channel:
+                return Response(
+                    {"message": "채널을 찾을 수 없습니다."},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+            invite_url = f"{settings.FRONTEND_URL}/api/user-channel/join/{channel.id}/{encoded_invite_user}"
+            return Response({"invite_url": invite_url}, status=status.HTTP_200_OK)
+        except Exception as e:
+            print(f"UserChannelInviteView 오류: {e}")
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+def encode_user_id(user_id):
+    return base64.b64encode(str(user_id).encode()).decode()
+
+
+def decode_user_id(encoded_id):
+    return int(base64.b64decode(encoded_id.encode()).decode())
