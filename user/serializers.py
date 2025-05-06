@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import UserMain, UserProfile
+from .models import UserMain, UserProfile, UserFriend
 
 
 class UserMainSerializer(serializers.ModelSerializer):
@@ -77,3 +77,17 @@ class UserProfileListSerializer(serializers.ModelSerializer):
             "user",
             "image_url",
         )
+
+
+class UserFriendSerializer(serializers.ModelSerializer):
+    from_user = UserMainSerializer(read_only=True)
+
+    class Meta:
+        model = UserFriend
+        fields = (
+            "from_user",
+            "status",
+        )
+
+    def get_from_user(self, obj):
+        return UserMainSerializer(obj.from_user).data
