@@ -7,11 +7,12 @@ from django.db import transaction
 from rest_framework.views import APIView
 from rest_framework import status
 from rest_framework.response import Response
-
+from rest_framework.exceptions import ValidationError
 from .models import UserMain, UserProfile
 from .serializers import UserMainSerializer, UserMainCreateSerializer
 from common.utils.tokens import Token
 from user_channel.serializers import UserChannelSerializer
+
 logger = logging.getLogger(__name__)
 
 
@@ -86,8 +87,10 @@ class UserSignUpView(APIView):
             # 트렌젝션 시작 #
             with transaction.atomic():
                 # 유저 유효성 검사
-                serializer = UserMainCreateSerializer(data=user_data)
-                if serializer.is_valid():
+                serializer = UserMainCreateSerializer(
+                    data=user_data,
+                )
+                if serializer.is_valid(raise_exception=True):
                     # 유저 생성
                     user_main = serializer.save()
                     # 유저 프로필 생성
@@ -107,13 +110,16 @@ class UserSignUpView(APIView):
                     user_main.save()
                     success_response = self.token.set_cookie(success_response, tokens)
                     return success_response
-                else:
-                    return Response(
-                        {"message": "회원가입 실패"}, status=status.HTTP_400_BAD_REQUEST
-                    )
         except Exception as e:
-            logger.error(f"UserSignUpView 오류: {e}")
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            logger.error(f"회원가입 실패 : {e}")
+            if isinstance(e, ValidationError):
+                error_response = {"message": e.detail}
+            else:
+                error_response = {"message": str(e)}
+            return Response(
+                {"message": "회원가입 실패", "data": error_response},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
 
 class UserRefreshView(APIView):
@@ -172,6 +178,7 @@ class UserFriendView(APIView):
             logger.error(f"UserFriendView 오류: {e}")
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+
 class UserChannelView(APIView):
     def get(self, request):
         try:
@@ -184,4 +191,3 @@ class UserChannelView(APIView):
         except Exception as e:
             logger.error(f"UserChannelView 오류: {e}")
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
