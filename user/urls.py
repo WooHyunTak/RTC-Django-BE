@@ -5,7 +5,10 @@ from .views import (
     UserGetMeView,
     UserRefreshView,
     UserFriendView,
-    UserChannelView
+    UserChannelView,
+    UserRequestFriendView,
+    UserAcceptFriendView,
+    UserRequestFriendListView,
 )
 
 app_name = "user"
@@ -16,4 +19,11 @@ urlpatterns = [
     path("refresh/", UserRefreshView.as_view(), name="refresh"),
     path("my-friend/", UserFriendView.as_view(), name="friend"),
     path("my-channel/", UserChannelView.as_view(), name="channel"),
+    path("request-friend/", UserRequestFriendView.as_view(), name="request_friend"),
+    path("accept-friend/", UserAcceptFriendView.as_view(), name="accept_friend"),
+    path(
+        "request-friend-list/",
+        UserRequestFriendListView.as_view(),
+        name="request_friend_list",
+    ),
 ]

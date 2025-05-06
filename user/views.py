@@ -8,7 +8,7 @@ from rest_framework.views import APIView
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError
-from .models import UserMain, UserProfile
+from .models import UserMain, UserProfile, FriendStatus
 from .serializers import UserMainSerializer, UserMainCreateSerializer
 from common.utils.tokens import Token
 from user_channel.serializers import UserChannelSerializer
@@ -190,4 +190,58 @@ class UserChannelView(APIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
         except Exception as e:
             logger.error(f"UserChannelView 오류: {e}")
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class UserRequestFriendView(APIView):
+    def post(self, request):
+        try:
+            friend_id = request.data.get("friend_id")
+            user_main = UserMain.objects.select_related("userprofile").get(
+                id=request.token_user.id
+            )
+            if user_main.my_friend.filter(id=friend_id).exists():
+                return Response(
+                    {"message": "이미 친구입니다."}, status=status.HTTP_400_BAD_REQUEST
+                )
+            user_main.my_friend.add(friend_id, status=FriendStatus.PENDING)
+            user_main.save()
+            return Response(
+                {"message": "친구 요청 성공"},
+                status=status.HTTP_200_OK,
+            )
+        except Exception as e:
+            logger.error(f"UserRequestFriendView 오류: {e}")
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class UserRequestFriendListView(APIView):
+    def get(self, request):
+        try:
+            user_main = UserMain.objects.select_related("userprofile").get(
+                id=request.token_user.id
+            )
+            requests = user_main.my_friend.filter(status=FriendStatus.PENDING)
+            serializer = UserMainSerializer(requests, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Exception as e:
+            logger.error(f"UserRequestFriendListView 오류: {e}")
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class UserAcceptFriendView(APIView):
+    def post(self, request):
+        try:
+            friend_id = request.data.get("friend_id")
+            status = request.data.get("status")
+            user_main = UserMain.objects.select_related("userprofile").get(
+                id=request.token_user.id
+            )
+            user_main.my_friend.add(friend_id, status=status)
+            user_main.save()
+            return Response(
+                {"message": "친구 요청 수락 성공"}, status=status.HTTP_200_OK
+            )
+        except Exception as e:
+            logger.error(f"UserAcceptFriendView 오류: {e}")
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)

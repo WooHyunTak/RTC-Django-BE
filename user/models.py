@@ -1,7 +1,6 @@
 from django.db import models
 
 
-
 class UserMain(models.Model):
     name = models.CharField(
         max_length=255,
@@ -49,12 +48,25 @@ class UserProfile(models.Model):
     class Meta:
         db_table = "user_profile"
 
+
+class FriendStatus(models.TextChoices):
+    PENDING = "pending"
+    ACCEPTED = "accepted"
+    REJECTED = "rejected"
+
+
 class UserFriend(models.Model):
     from_user = models.ForeignKey(
         UserMain, related_name="my_friend", on_delete=models.CASCADE
     )
     to_user = models.ForeignKey(
         UserMain, related_name="received_friend", on_delete=models.CASCADE
+    )
+    status = models.CharField(
+        max_length=255,
+        choices=FriendStatus.choices,
+        default=FriendStatus.PENDING,
+        help_text="친구 상태",
     )
     created_at = models.DateTimeField(auto_now_add=True, help_text="생성일")
     updated_at = models.DateTimeField(auto_now=True, help_text="수정일")
