@@ -9,11 +9,13 @@ from .views import (
     UserRequestFriendView,
     UserAcceptFriendView,
     UserRequestFriendListView,
+    UserLogoutView,
 )
 
 app_name = "user"
 urlpatterns = [
     path("login/", UserMainLoginView.as_view(), name="login"),
+    path("logout/", UserLogoutView.as_view(), name="logout"),
     path("signup/", UserSignUpView.as_view(), name="signup"),
     path("me/", UserGetMeView.as_view(), name="me"),
     path("refresh/", UserRefreshView.as_view(), name="refresh"),

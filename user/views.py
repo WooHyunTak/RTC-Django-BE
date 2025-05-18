@@ -62,6 +62,36 @@ class UserMainLoginView(APIView):
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
+class UserLogoutView(APIView):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.token = Token()
+
+    def post(self, request):
+        try:
+            # 미들웨어에서 설정한 token_user가 있는지 확인
+            if hasattr(request, "token_user"):
+                user_main = UserMain.objects.select_related("userprofile").get(
+                    id=request.token_user.id
+                )
+                user_main.refresh_token = None
+                user_main.save()
+                success_response = Response(
+                    {"message": "로그아웃 성공"}, status=status.HTTP_200_OK
+                )
+                success_response = self.token.delete_cookie(success_response)
+                return success_response
+            else:
+                # 미들웨어에서 token_user를 설정하지 못했을 경우 (토큰이 없거나 유효하지 않음)
+                return Response(
+                    {"message": "인증되지 않은 사용자입니다."},
+                    status=status.HTTP_401_UNAUTHORIZED,
+                )
+        except Exception as e:
+            logger.error(f"UserLogoutView 오류: {e}")
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
 class UserGetMeView(APIView):
     def get(self, request):
         try:
