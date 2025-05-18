@@ -27,8 +27,15 @@ class UserMainLoginView(APIView):
 
     def post(self, request):
         try:
-            login_email = request.data.get("loginEmail")
-            login_password = request.data.get("loginPassword")
+            login_email = request.data.get("email")
+            login_password = request.data.get("password")
+
+            # 필수 파라미터 검사
+            if not login_email or not login_password:
+                return Response(
+                    {"message": "이메일 또는 비밀번호가 입력되지 않았습니다."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
             user_main = UserMain.objects.select_related("userprofile").get(
                 email=login_email
             )
