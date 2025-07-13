@@ -27,8 +27,8 @@ class UserMainLoginView(APIView):
 
     def post(self, request):
         try:
-            login_email = request.data.get("email")
-            login_password = request.data.get("password")
+            login_email = request.data.get("loginEmail")
+            login_password = request.data.get("loginPassword")
 
             # 필수 파라미터 검사
             if not login_email or not login_password:
@@ -40,23 +40,24 @@ class UserMainLoginView(APIView):
                 email=login_email
             )
             serializer = UserMainSerializer(user_main)
-            if user_main.password == login_password:
-                tokens = self.token.set_token(user_main)
-                user_main.refresh_token = tokens["refresh_token"]
-                user_main.save()
-                success_response = Response(
-                    {
-                        "message": "로그인 성공",
-                        "data": serializer.data,
-                    },
-                    status=status.HTTP_200_OK,
-                )
-                success_response = self.token.set_cookie(success_response, tokens)
-                return success_response
-            else:
+            if user_main.password != login_password:
                 return Response(
-                    {"message": "로그인 실패"}, status=status.HTTP_400_BAD_REQUEST
+                    {"message": "비밀번호가 일치하지 않습니다."},
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
+
+            tokens = self.token.set_token(user_main)
+            user_main.refresh_token = tokens["refresh_token"]
+            user_main.save()
+            success_response = Response(
+                {
+                    "message": "로그인 성공",
+                    "data": serializer.data,
+                },
+                status=status.HTTP_200_OK,
+            )
+            success_response = self.token.set_cookie(success_response, tokens)
+            return success_response
         except Exception as e:
             logger.error(f"UserMainLoginView 오류: {e}")
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)

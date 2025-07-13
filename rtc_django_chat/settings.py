@@ -13,15 +13,29 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 from pathlib import Path
 from datetime import timedelta
 import os
-from dotenv import load_dotenv
+import json
+import logging
 
-load_dotenv()
+logger = logging.getLogger(__name__)
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
+
+# 환경변수 로드
+def get_env(env_file="local.env"):
+    env_path = os.path.join(BASE_DIR, env_file)
+    try:
+        with open(env_path, "r") as f:
+            env_data = json.load(f)
+        return env_data
+    except Exception as e:
+        logger.error(f"Error loading {env_file}: {e}")
+        return {}
+
+
+environ = get_env()
+
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = "django-insecure-$+*2=0jygrs^th_^8xy=4glq8(ib__=(io7e7(tx&3)n40y(y!"
@@ -61,14 +75,10 @@ MIDDLEWARE = [
     "common.middlewares.cookie_jwt.CookieJWTAuthentication",
 ]
 
-PRODUCTION = os.getenv("PRODUCTION")
+PRODUCTION = environ.get("PRODUCTION")
 
-if PRODUCTION:
-    JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
-    JWT_ALGORITHM = "HS256"
-else:
-    JWT_SECRET_KEY = SECRET_KEY
-    JWT_ALGORITHM = "HS256"
+JWT_SECRET_KEY = environ.get("JWT_SECRET_KEY")
+JWT_ALGORITHM = "HS256"
 
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),
@@ -96,32 +106,26 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "rtc_django_chat.wsgi.application"
 
+CASSANDRA_KEYSPACE = environ.get("CASSANDRA_KEYSPACE")
+CASSANDRA_HOST = environ.get("CASSANDRA_HOST")
+CASSANDRA_PORT = environ.get("CASSANDRA_PORT")
 
-# Database
-# https://docs.djangoproject.com/en/5.2/ref/settings/#databases
-
-if PRODUCTION:
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.postgresql",
-            "NAME": os.getenv("DATABASE_NAME"),
-            "USER": os.getenv("DATABASE_USER"),
-            "PASSWORD": os.getenv("DATABASE_PASSWORD"),
-            "HOST": os.getenv("DATABASE_HOST"),
-            "PORT": os.getenv("DATABASE_PORT"),
-        }
-    }
-else:
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.postgresql",
-            "NAME": "rtc_django_chat",
-            "USER": "postgres",
-            "PASSWORD": "postgres",
-            "HOST": "localhost",
-            "PORT": "5432",
-        }
-    }
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": environ.get("POSTGRES_DATABASE_NAME"),
+        "USER": environ.get("POSTGRES_DATABASE_USER"),
+        "PASSWORD": environ.get("POSTGRES_DATABASE_PASSWORD"),
+        "HOST": environ.get("POSTGRES_DATABASE_HOST"),
+        "PORT": environ.get("POSTGRES_DATABASE_PORT"),
+    },
+    "cassandra": {
+        "ENGINE": "django_cassandra_engine",
+        "NAME": CASSANDRA_KEYSPACE,
+        "HOST": CASSANDRA_HOST,
+        "PORT": CASSANDRA_PORT,
+    },
+}
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
@@ -174,4 +178,4 @@ STATIC_URL = "static/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-FRONTEND_URL = os.getenv("FRONTEND_URL")
+FRONTEND_URL = environ.get("FRONTEND_URL")

@@ -1,4 +1,6 @@
 from django.db import models
+from cassandra.cqlengine import models as cassandra_models
+from cassandra.cqlengine import columns
 
 
 class UserMain(models.Model):
@@ -74,3 +76,19 @@ class UserFriend(models.Model):
     class Meta:
         db_table = "user_friend"
         unique_together = (("from_user", "to_user"),)
+
+
+class UserDirectMessage(cassandra_models.Model):
+    # 파티션키: 메시지 상대방 이름
+    chat_id = columns.Text(primary_key=True)  # 채팅의 고유 아이디 -> user_id1#user_id2
+    # 클러스터키: 메시지 아이디, 메시지
+    message_id = columns.TimeUUID(
+        primary_key=True, clustering_order="DESC"
+    )  # 메시지 아이디
+    from_user = columns.Text()  # 메시지 작성자
+    message = columns.Text()  # 메시지 내용
+    created_at = columns.DateTime()  # 메시지 생성일
+    updated_at = columns.DateTime()  # 메시지 수정일
+
+    class Meta:
+        table_name = "user_direct_message"
