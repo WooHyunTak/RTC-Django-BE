@@ -10,11 +10,11 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
-from pathlib import Path
-from datetime import timedelta
-import os
 import json
 import logging
+import os
+from datetime import timedelta
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "corsheaders",
+    "rtc_django_chat",
     "user",
     "user_channel",
 ]
@@ -110,6 +111,10 @@ CASSANDRA_KEYSPACE = environ.get("CASSANDRA_KEYSPACE")
 CASSANDRA_HOST = environ.get("CASSANDRA_HOST")
 CASSANDRA_PORT = environ.get("CASSANDRA_PORT")
 
+REDIS_HOST = environ.get("REDIS_HOST")
+REDIS_DB = environ.get("REDIS_DB")
+REDIS_PORT = environ.get("REDIS_PORT")
+
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
@@ -124,6 +129,26 @@ DATABASES = {
         "NAME": CASSANDRA_KEYSPACE,
         "HOST": CASSANDRA_HOST,
         "PORT": CASSANDRA_PORT,
+    },
+    "redis": {
+        "ENGINE": "django_redis.cache.RedisCache",
+        "LOCATION": f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}",
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        },
+    },
+}
+
+# Channel Layers
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"],
+            "prefix": "asgi",
+            "capacity": 5000,
+            "expiry": 3600,
+        },
     },
 }
 
@@ -167,6 +192,8 @@ USE_I18N = True
 
 USE_TZ = True
 
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
