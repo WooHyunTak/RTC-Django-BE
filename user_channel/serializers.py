@@ -1,10 +1,13 @@
 from rest_framework import serializers
+
 from user.serializers import UserMainSerializer
+
 from .models import UserChannel
 
 
 class UserChannelCreateSerializer(serializers.ModelSerializer):
     created_by = UserMainSerializer(read_only=True)
+    members = UserMainSerializer(read_only=True, many=True)
 
     def create(self, validated_data):
         created_by_id = self.context.get("created_by")
@@ -12,12 +15,27 @@ class UserChannelCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = UserChannel
-        fields = ("name", "description", "created_by")
+        fields = ("name", "description", "created_by", "is_private", "type", "members")
+
+
+class UserChannelListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserChannel
+        fields = ("id", "name", "is_private", "type")
 
 
 class UserChannelSerializer(serializers.ModelSerializer):
     created_by = UserMainSerializer(read_only=True)
+    members = UserMainSerializer(read_only=True, many=True)
 
     class Meta:
         model = UserChannel
-        fields = ("id", "name", "description", "created_by")
+        fields = (
+            "id",
+            "name",
+            "description",
+            "created_by",
+            "is_private",
+            "type",
+            "members",
+        )

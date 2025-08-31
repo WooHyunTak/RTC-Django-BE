@@ -1,15 +1,43 @@
-from django.shortcuts import render
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-from .serializers import UserChannelCreateSerializer, UserChannelSerializer
-from .models import UserChannel
-from django.conf import settings
-import logging
-from user.models import UserMain
 import base64
+import logging
+
+from django.conf import settings
+from django.db import transaction
+from rest_framework import status
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from user.models import UserMain
+
+from .models import UserChannel, UserChannelMember
+from .serializers import (
+    UserChannelCreateSerializer,
+    UserChannelListSerializer,
+    UserChannelSerializer,
+)
 
 logger = logging.getLogger(__name__)
+
+
+class UserChannelListView(APIView):
+    def get(self, request):
+        try:
+            # 로그인 정보
+            login_user_id = request.token_user.id
+            channels = UserChannel.objects.filter(members__id=login_user_id)
+            serializer = UserChannelListSerializer(channels, many=True)
+            return Response(
+                {
+                    "message": "success",
+                    "list": serializer.data,
+                },
+                status=status.HTTP_200_OK,
+            )
+        except UserChannel.DoesNotExist:
+            return Response(
+                {"message": "채널 정보를 찾을 수 없습니다."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
 
 class UserChannelCreateView(APIView):
@@ -20,17 +48,65 @@ class UserChannelCreateView(APIView):
                 data=request.data, context={"created_by": created_by}
             )
             if serializer.is_valid():
-                serializer.save()
-                success_response = Response(
-                    {"message": "채널 생성 성공", "data": serializer.data},
-                    status=status.HTTP_201_CREATED,
-                )
-                return success_response
+                # Transaction 시작
+                with transaction.atomic():
+                    channel = serializer.save()
+
+                    member = UserMain.objects.get(id=created_by)
+
+                    UserChannelMember.objects.get_or_create(
+                        channel=channel,
+                        user=member,
+                    )
+
+                    success_response = Response(
+                        {"message": "채널 생성 성공", "data": serializer.data},
+                        status=status.HTTP_201_CREATED,
+                    )
+                    return success_response
             else:
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        except Exception as e:
-            print(f"UserChannelCreateView 오류: {e}")
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except UserChannel.DoesNotExist:
+            return Response(
+                {"message": "채널 정보를 찾을 수 없습니다."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+
+class UserChannelDetailView(APIView):
+    def get(self, request, pk):
+        try:
+            channel = UserChannel.objects.get(id=pk)
+            serializer = UserChannelSerializer(channel)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except UserChannel.DoesNotExist:
+            return Response(
+                {"message": "채널 정보를 찾을 수 없습니다."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+    def post(self, request, pk):
+        try:
+            channel = UserChannel.objects.get(id=pk)
+            serializer = UserChannelSerializer(channel, data=request.data)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            else:
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except UserChannel.DoesNotExist:
+            return Response(
+                {"message": "채널 정보를 찾을 수 없습니다."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+    def delete(self, request, pk):
+        try:
+            channel = UserChannel.objects.get(id=pk)
+            channel.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except UserChannel.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
 
 
 class UserChannelJoinView(APIView):
@@ -49,9 +125,11 @@ class UserChannelJoinView(APIView):
                 {"message": "채널 참여 성공", "data": serializer.data},
                 status=status.HTTP_200_OK,
             )
-        except Exception as e:
-            print(f"UserChannelJoinView 오류: {e}")
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except UserChannel.DoesNotExist:
+            return Response(
+                {"message": "채널 정보를 찾을 수 없습니다."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
 
 class UserChannelLeaveView(APIView):
@@ -69,9 +147,11 @@ class UserChannelLeaveView(APIView):
                     {"message": "채널에 참여하지 않은 사용자입니다."},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
-        except Exception as e:
-            print(f"UserChannelLeaveView 오류: {e}")
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except UserChannel.DoesNotExist:
+            return Response(
+                {"message": "채널 정보를 찾을 수 없습니다."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
 
 class UserChannelInviteURLView(APIView):
@@ -87,9 +167,11 @@ class UserChannelInviteURLView(APIView):
                 )
             invite_url = f"{settings.FRONTEND_URL}/api/user-channel/join/{channel.id}/{encoded_invite_user}"
             return Response({"invite_url": invite_url}, status=status.HTTP_200_OK)
-        except Exception as e:
-            print(f"UserChannelInviteView 오류: {e}")
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except UserChannel.DoesNotExist:
+            return Response(
+                {"message": "채널 정보를 찾을 수 없습니다."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
 
 def encode_user_id(user_id):

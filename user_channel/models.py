@@ -1,7 +1,8 @@
-from django.db import models
-from user.models import UserMain
-from cassandra.cqlengine import models as cassandra_models
 from cassandra.cqlengine import columns
+from cassandra.cqlengine import models as cassandra_models
+from django.db import models
+
+from user.models import UserMain
 
 
 class UserChannel(models.Model):
@@ -11,6 +12,13 @@ class UserChannel(models.Model):
     description = models.TextField(null=True, blank=True, help_text="채널 설명")
     created_by = models.ForeignKey(
         UserMain, on_delete=models.CASCADE, help_text="채널 생성자"
+    )
+    is_private = models.BooleanField(default=False, help_text="채널 공개 여부")
+    type = models.CharField(
+        max_length=10,
+        help_text="채널 유형",
+        null=True,
+        blank=True,
     )
     created_at = models.DateTimeField(auto_now_add=True, help_text="생성일")
     updated_at = models.DateTimeField(auto_now=True, help_text="수정일")

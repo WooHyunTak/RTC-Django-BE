@@ -1,14 +1,21 @@
 from django.urls import path
+
 from .views import (
     UserChannelCreateView,
+    UserChannelDetailView,
+    UserChannelInviteURLView,
     UserChannelJoinView,
     UserChannelLeaveView,
-    UserChannelInviteURLView,
+    UserChannelListView,
 )
 
-app_name = "user_channel"
+app_name = "channels"
 urlpatterns = [
     path("", UserChannelCreateView.as_view(), name="create"),  # 채널 생성
+    path(
+        "my-channels/", UserChannelListView.as_view(), name="my_channels"
+    ),  # 채널 목록 조회
+    path("<int:pk>/", UserChannelDetailView.as_view(), name="detail"),  # 채널 상세 조회
     path("join/<int:pk>/", UserChannelJoinView.as_view(), name="join"),  # 채널 참여
     path("leave/<int:pk>/", UserChannelLeaveView.as_view(), name="leave"),  # 채널 탈퇴
     path(
