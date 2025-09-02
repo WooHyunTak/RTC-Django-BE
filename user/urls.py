@@ -7,8 +7,9 @@ from .views import (
     UserGetMeView,
     UserLogoutView,
     UserMainLoginView,
+    UserReceivedFriendRequestView,
     UserRefreshView,
-    UserRequestFriendListView,
+    UserRejectFriendView,
     UserRequestFriendView,
     UserSignUpView,
 )
@@ -29,8 +30,11 @@ urlpatterns = [
         "accept-friend/", UserAcceptFriendView.as_view(), name="accept_friend"
     ),  # 친구 수락
     path(
-        "request-friend-list/",  # 친구 요청 목록 조회
-        UserRequestFriendListView.as_view(),
+        "reject-friend/", UserRejectFriendView.as_view(), name="reject_friend"
+    ),  # 친구 거절
+    path(
+        "received-friend-requests/",  # 친구 요청 목록 조회
+        UserReceivedFriendRequestView.as_view(),
         name="request_friend_list",
     ),
 ]
