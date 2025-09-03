@@ -1,6 +1,6 @@
-from django.db import models
-from cassandra.cqlengine import models as cassandra_models
 from cassandra.cqlengine import columns
+from cassandra.cqlengine import models as cassandra_models
+from django.db import models
 
 
 class UserMain(models.Model):

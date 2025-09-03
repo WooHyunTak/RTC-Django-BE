@@ -203,16 +203,16 @@ class UserRefreshView(APIView):
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
-class UserFriendView(APIView):
+class UserFriendListView(APIView):
     def get(self, request):
         try:
             user_main = UserMain.objects.select_related("userprofile").get(
                 id=request.token_user.id
             )
-            user_main = user_main.my_friend.all()
+            user_main = user_main.friends.all()
             serializer = UserMainSerializer(user_main, many=True)
             success_response = Response(
-                {"message": "친구 목록 조회 성공", "data": serializer.data},
+                {"message": "친구 목록 조회 성공", "list": serializer.data},
                 status=status.HTTP_200_OK,
             )
             return success_response

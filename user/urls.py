@@ -3,7 +3,7 @@ from django.urls import path
 from .views import (
     UserAcceptFriendView,
     UserChannelView,
-    UserFriendView,
+    UserFriendListView,
     UserGetMeView,
     UserLogoutView,
     UserMainLoginView,
@@ -21,7 +21,9 @@ urlpatterns = [
     path("signup/", UserSignUpView.as_view(), name="signup"),  # 회원가입
     path("me/", UserGetMeView.as_view(), name="me"),  # 내 정보 조회
     path("refresh/", UserRefreshView.as_view(), name="refresh"),  # 토큰 갱신
-    path("my-friend/", UserFriendView.as_view(), name="friend"),  # 내 친구 목록 조회
+    path(
+        "my-friends/", UserFriendListView.as_view(), name="friend"
+    ),  # 내 친구 목록 조회
     path("my-channel/", UserChannelView.as_view(), name="channel"),  # 내 채널 목록 조회
     path(
         "request-friend/", UserRequestFriendView.as_view(), name="request_friend"
