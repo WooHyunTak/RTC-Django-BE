@@ -20,6 +20,9 @@ class UserChannel(models.Model):
         null=True,
         blank=True,
     )
+    is_direct = models.BooleanField(
+        default=False, help_text="다이렉트 메시지 채팅 여부"
+    )
     created_at = models.DateTimeField(auto_now_add=True, help_text="생성일")
     updated_at = models.DateTimeField(auto_now=True, help_text="수정일")
     members = models.ManyToManyField(

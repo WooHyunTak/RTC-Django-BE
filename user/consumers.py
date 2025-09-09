@@ -58,6 +58,15 @@ class UserSocketConsumer(AsyncJsonWebsocketConsumer):
         except Exception:
             logger.error("Error discarding channel group: django_chat_user")
 
+    async def receive_json(self, content):
+        try:
+            message_type = content.get("type")
+            message = content.get("message")
+            await self.send_message(message_type, message)
+        except Exception:
+            await self.close(code=4401)
+            logger.error(f"Error receiving message: {content}")
+
     async def send_message(self, message_type, message):
         try:
             message_data = {
