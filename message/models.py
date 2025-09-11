@@ -9,6 +9,7 @@ from user_channel.models import UserChannel
 class MessageType(models.TextChoices):
     NORMAL = "normal", "Normal"
     SYSTEM = "system", "System"
+    FILE = "file", "File"
     BOT = "bot", "Bot"
 
 
@@ -33,12 +34,6 @@ class Message(models.Model):
         choices=MessageType.choices,
         default=MessageType.NORMAL,
         help_text="메시지 유형",
-    )
-    status = models.CharField(
-        max_length=10,
-        choices=MessageStatus.choices,
-        default=MessageStatus.PENDING,
-        help_text="메시지 상태",
     )
     from_user = models.ForeignKey(
         UserMain,
@@ -65,6 +60,12 @@ class Message(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True, help_text="메시지 생성일")
     updated_at = models.DateTimeField(auto_now=True, help_text="메시지 수정일")
+    attachments = models.ManyToManyField(
+        "MessageAttachment",
+        related_name="messages",
+        blank=True,
+        help_text="첨부 파일",
+    )
 
     def __str__(self):
         return self.clean_content
@@ -78,12 +79,6 @@ class Message(models.Model):
 
 
 class MessageAttachment(models.Model):
-    message = models.ForeignKey(
-        Message,
-        related_name="attachments",
-        on_delete=models.CASCADE,
-        help_text="첨부된 메시지",
-    )
     type = models.CharField(
         max_length=20,
         choices=AttachmentType.choices,
@@ -103,4 +98,3 @@ class MessageAttachment(models.Model):
 
     class Meta:
         db_table = "message_attachment"
-        indexes = [models.Index(fields=["message"])]

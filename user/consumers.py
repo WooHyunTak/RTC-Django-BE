@@ -3,6 +3,7 @@ import logging
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
 
 from common.redis_client import redis_client
+from user.helper import save_message_by_channel
 
 logger = logging.getLogger(__name__)
 
@@ -60,12 +61,27 @@ class UserSocketConsumer(AsyncJsonWebsocketConsumer):
 
     async def receive_json(self, content):
         try:
-            message_type = content.get("type")
-            message = content.get("message")
-            await self.send_message(message_type, message)
+            # 메시지 저장
+            group_name, message_content = await save_message_by_channel(content)
+            # 채널 그룹에 소켓 전송
+            await self.send_message_to_group(group_name, message_content)
         except Exception:
             await self.close(code=4401)
             logger.error(f"Error receiving message: {content}")
+
+    async def send_message_to_group(self, group_name, message):
+        """
+        채널 그룹에 소켓 전송
+        :param group_name: 채널 그룹 이름
+        :param message: 메시지
+        """
+        await self.channel_layer.send(
+            group_name,
+            {
+                "type": "websocket.send",
+                "message": message,
+            },
+        )
 
     async def send_message(self, message_type, message):
         try:

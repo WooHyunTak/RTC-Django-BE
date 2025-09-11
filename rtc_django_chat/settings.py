@@ -62,6 +62,7 @@ INSTALLED_APPS = [
     "rtc_django_chat",
     "user",
     "user_channel",
+    "message",
 ]
 
 MIDDLEWARE = [
@@ -104,6 +105,12 @@ TEMPLATES = [
         },
     },
 ]
+
+# AWS S3
+AWS_ACCESS_KEY_ID = environ.get("AWS_ACCESS_KEY_ID")
+AWS_SECRET_ACCESS_KEY = environ.get("AWS_SECRET_ACCESS_KEY")
+AWS_REGION = environ.get("AWS_REGION")
+AWS_STORAGE_BUCKET_NAME = environ.get("AWS_STORAGE_BUCKET_NAME")
 
 WSGI_APPLICATION = "rtc_django_chat.wsgi.application"
 
