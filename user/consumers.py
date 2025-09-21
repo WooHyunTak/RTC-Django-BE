@@ -3,6 +3,7 @@ import logging
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
 
 from common.redis_client import redis_client
+from user.helper import save_message_by_channel, save_message_to_user
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +19,10 @@ class UserSocketConsumer(AsyncJsonWebsocketConsumer):
 
     def redis_hdel_key(self, key, field):
         self.redis_client.hdel(key, field)
+
+    def get_user_channel_name(self, field):
+        channel_name_key = "django_chat_active_channel"
+        return self.redis_client.hget(channel_name_key, field)
 
     async def connect(self):
         try:
@@ -58,25 +63,34 @@ class UserSocketConsumer(AsyncJsonWebsocketConsumer):
         except Exception:
             logger.error("Error discarding channel group: django_chat_user")
 
-    async def receive_json(self, content):
+    async def receive_json(self, data):
         try:
-            print(f"Received message: {content}")
-            # 메시지 저장
-            # group_name, message_content = await save_message_by_channel(content)
-            # 채널 그룹에 소켓 전송
-            # await self.send_message_to_group(group_name, message_content)
+            send_channel_type = data.get("sendChannelType")
+            if send_channel_type == "channel":
+                group_name, message_content = await save_message_by_channel(data)
+                await self.send_message_by_channel(group_name, message_content)
+
+            elif send_channel_type == "direct":
+                # 보낸사람 정보
+                from_user = self.scope.get("token_user")
+                from_user_id = from_user.id
+                data["from_user_id"] = from_user_id
+                message = await save_message_to_user(data)
+                channel_name = self.get_user_channel_name(from_user_id)
+                await self.send_message_by_channel(channel_name, message)
+
         except Exception:
             await self.close(code=4401)
-            logger.error(f"Error receiving message: {content}")
+            logger.error(f"Error receiving message: {data}")
 
-    async def send_message_to_group(self, group_name, message):
+    async def send_message_by_channel(self, channel_name, message):
         """
         채널 그룹에 소켓 전송
-        :param group_name: 채널 그룹 이름
+        :param channel_name: 채널 그룹 이름
         :param message: 메시지
         """
         await self.channel_layer.send(
-            group_name,
+            channel_name,
             {
                 "type": "websocket.send",
                 "message": message,
