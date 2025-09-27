@@ -206,11 +206,10 @@ class UserRefreshView(APIView):
 class UserFriendListView(APIView):
     def get(self, request):
         try:
-            user_main = UserMain.objects.select_related("userprofile").get(
-                id=request.token_user.id
-            )
-            user_main = user_main.friends.all()
-            serializer = UserMainSerializer(user_main, many=True)
+            # User 테이블의 사용자와 친구관계가 있는 사용자 목록 조회
+            friend_list = UserMain.objects.filter(friends__id=request.token_user.id)
+
+            serializer = UserMainSerializer(friend_list, many=True)
             success_response = Response(
                 {"message": "친구 목록 조회 성공", "list": serializer.data},
                 status=status.HTTP_200_OK,
@@ -238,22 +237,24 @@ class UserChannelView(APIView):
 class UserRequestFriendView(APIView):
     def post(self, request):
         try:
+            # 로그인 정보
+            login_user_id = request.token_user.id
+            # 친구 요청 대상 사용자 이름
             user_name = request.data.get("userName")
 
-            request_user = UserMain.objects.select_related("userprofile").get(
-                name=user_name
-            )
+            # 친구 요청 대상 사용자 조회
+            to_user = UserMain.objects.select_related("userprofile").get(name=user_name)
 
-            user_main = UserMain.objects.select_related("userprofile").get(
-                id=request.token_user.id
-            )
-            if user_main.my_friend.filter(to_user=request_user).exists():
+            # 요청자 친구 목록에 사용자가 이미 있다면 친구 요청 불가
+            if to_user.my_friend.filter(to_user_id=login_user_id).exists():
                 return Response(
                     {"message": "이미 친구입니다."}, status=status.HTTP_400_BAD_REQUEST
                 )
+
+            # 친구 요청 생성
             UserFriend.objects.create(
-                from_user=user_main,
-                to_user=request_user,
+                from_user_id=login_user_id,
+                to_user_id=to_user.id,
                 status=FriendStatus.PENDING,
             )
             return Response(
