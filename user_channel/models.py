@@ -28,7 +28,7 @@ class UserChannel(models.Model):
     members = models.ManyToManyField(
         UserMain,
         through="UserChannelMember",
-        related_name="channels",
+        related_name="members",
         help_text="참여 사용자",
     )
 

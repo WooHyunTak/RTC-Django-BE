@@ -54,3 +54,22 @@ class UserChannelMessageSerializer(serializers.ModelSerializer):
             "root_message",
             "created_at",
         )
+
+
+class UserDMChannelListSerializer(serializers.ModelSerializer):
+    to_user = serializers.SerializerMethodField()
+
+    class Meta:
+        model = UserChannel
+        fields = (
+            "id",
+            "to_user",
+        )
+
+    def get_to_user(self, obj):
+        try:
+            from_user_id = self.context.get("from_user_id")
+            to_user = obj.members.exclude(id=from_user_id).get()
+            return UserMainSerializer(to_user).data if to_user else None
+        except Exception:
+            return None

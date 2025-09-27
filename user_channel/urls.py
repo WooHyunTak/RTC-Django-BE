@@ -8,6 +8,7 @@ from .views import (
     UserChannelLeaveView,
     UserChannelListView,
     UserChannelMessageView,
+    UserDMChannelListView,
 )
 
 app_name = "channels"
@@ -34,4 +35,9 @@ urlpatterns = [
         UserChannelMessageView.as_view(),
         name="messages",
     ),  # 채널 메시지 조회
+    path(
+        "direct-messages/",
+        UserDMChannelListView.as_view(),
+        name="direct_messages",
+    ),  # 사용자 다이렉트 메시지 채널 조회
 ]
