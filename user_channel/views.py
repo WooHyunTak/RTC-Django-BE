@@ -7,12 +7,14 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from message.models import Message
 from user.models import UserMain
 
 from .models import UserChannel, UserChannelMember
 from .serializers import (
     UserChannelCreateSerializer,
     UserChannelListSerializer,
+    UserChannelMessageSerializer,
     UserChannelSerializer,
 )
 
@@ -167,6 +169,26 @@ class UserChannelInviteURLView(APIView):
                 )
             invite_url = f"{settings.FRONTEND_URL}/api/user-channel/join/{channel.id}/{encoded_invite_user}"
             return Response({"invite_url": invite_url}, status=status.HTTP_200_OK)
+        except UserChannel.DoesNotExist:
+            return Response(
+                {"message": "채널 정보를 찾을 수 없습니다."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+
+class UserChannelMessageView(APIView):
+    limit = 30
+
+    def get(self, request, pk):
+        try:
+            UserChannel.objects.get(id=pk)
+            messages = (
+                Message.objects.select_related("from_user")
+                .filter(channel_id=pk)
+                .order_by("-created_at")[: self.limit]
+            )
+            serializer = UserChannelMessageSerializer(messages, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
         except UserChannel.DoesNotExist:
             return Response(
                 {"message": "채널 정보를 찾을 수 없습니다."},

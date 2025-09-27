@@ -7,6 +7,7 @@ from .views import (
     UserChannelJoinView,
     UserChannelLeaveView,
     UserChannelListView,
+    UserChannelMessageView,
 )
 
 app_name = "channels"
@@ -28,4 +29,9 @@ urlpatterns = [
         UserChannelJoinView.as_view(),
         name="join_with_encoded_user_id",
     ),  # 채널 초대 URL 참여
+    path(
+        "<int:pk>/messages/",
+        UserChannelMessageView.as_view(),
+        name="messages",
+    ),  # 채널 메시지 조회
 ]

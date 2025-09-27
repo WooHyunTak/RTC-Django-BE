@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from message.models import Message
 from user.serializers import UserMainSerializer
 
 from .models import UserChannel
@@ -38,4 +39,18 @@ class UserChannelSerializer(serializers.ModelSerializer):
             "is_private",
             "type",
             "members",
+        )
+
+
+class UserChannelMessageSerializer(serializers.ModelSerializer):
+    from_user = UserMainSerializer(read_only=True)
+
+    class Meta:
+        model = Message
+        fields = (
+            "id",
+            "from_user",
+            "content",
+            "root_message",
+            "created_at",
         )
