@@ -27,7 +27,9 @@ class UserChannelListView(APIView):
         try:
             # 로그인 정보
             login_user_id = request.token_user.id
-            channels = UserChannel.objects.filter(members__id=login_user_id)
+            channels = UserChannel.objects.filter(
+                members__id=login_user_id, is_direct=False
+            )
             serializer = UserChannelListSerializer(channels, many=True)
             return Response(
                 {
@@ -186,7 +188,7 @@ class UserChannelMessageView(APIView):
             messages = (
                 Message.objects.select_related("from_user")
                 .filter(channel_id=pk)
-                .order_by("-created_at")[: self.limit]
+                .order_by("created_at")[: self.limit]
             )
             serializer = UserChannelMessageSerializer(messages, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
@@ -201,10 +203,14 @@ class UserDMChannelListView(APIView):
     def get(self, request):
         try:
             # 내가 참여한 다이렉트 메시지 채널 조회
-            channels = UserChannel.objects.filter(
-                members__id=request.token_user.id,
-                is_direct=True,
-            ).prefetch_related("members")
+            channels = (
+                UserChannel.objects.filter(
+                    members__id=request.token_user.id,
+                    is_direct=True,
+                )
+                .prefetch_related("members")
+                .order_by("created_at")
+            )
 
             serializer = UserDMChannelListSerializer(
                 channels, many=True, context={"from_user_id": request.token_user.id}
