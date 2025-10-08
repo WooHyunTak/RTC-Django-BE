@@ -68,7 +68,9 @@ class UserSocketConsumer(AsyncJsonWebsocketConsumer):
             send_channel_type = data.get("sendChannelType")
             if send_channel_type == "channel":
                 group_name, message_content = await save_message_by_channel(data)
-                await self.send_message_by_channel(group_name, message_content)
+                await self.send_message_by_channel(
+                    group_name, message_content, is_group=True
+                )
 
             elif send_channel_type == "direct":
                 # 보낸사람 정보
@@ -76,25 +78,50 @@ class UserSocketConsumer(AsyncJsonWebsocketConsumer):
                 from_user_id = from_user.id
                 data["from_user_id"] = from_user_id
                 message = await save_message_to_user(data)
-                channel_name = self.get_user_channel_name(from_user_id)
-                await self.send_message_by_channel(channel_name, message)
+                to_user_id = data.get("toUserId")
+                channel_name = self.get_user_channel_name(to_user_id)
+                if not channel_name:
+                    logger.warning(
+                        f"Skip direct send: not found channel for user {to_user_id}"
+                    )
+                    return
+                await self.send_message_by_channel(
+                    channel_name, message, is_group=False
+                )
 
-        except Exception:
+        except Exception as e:
             await self.close(code=4401)
-            logger.error(f"Error receiving message: {data}")
+            logger.error(f"Error receiving message: {e}")
 
-    async def send_message_by_channel(self, channel_name, message):
+    async def send_message_by_channel(self, channel_name, message, is_group=False):
         """
         채널 그룹에 소켓 전송
         :param channel_name: 채널 그룹 이름
         :param message: 메시지
         """
-        await self.channel_layer.send(
-            channel_name,
+        if is_group:
+            await self.channel_layer.group_send(
+                channel_name,
+                {
+                    "type": "chat.message",
+                    "message": message,
+                },
+            )
+        else:
+            await self.channel_layer.send(
+                channel_name,
+                {
+                    "type": "chat.message",
+                    "message": message,
+                },
+            )
+
+    async def chat_message(self, event):
+        await self.send_json(
             {
-                "type": "websocket.send",
-                "message": message,
-            },
+                "type": "message",
+                "message": event.get("message"),
+            }
         )
 
     async def send_message(self, message_type, message):
