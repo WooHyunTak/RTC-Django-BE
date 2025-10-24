@@ -51,6 +51,26 @@ class UserSocketConsumer(AsyncJsonWebsocketConsumer):
             await self.close(code=4401)
             return
 
+    # 사용자가 채널, DM에 입장하면 해당 채널그룹에 추가
+    async def connect_channel(self, channel_id):
+        try:
+            # 로그인 사용자의 레디스 채널
+            channel_name = self.get_user_channel_name(self.user.id)
+            # 로그인 사용자의 레디스 채널이 없다면 리턴
+            if not channel_name:
+                logger.warning(
+                    f"Skip direct send: not found channel for user {self.user.id}"
+                )
+                return
+
+            # 해당 채널그룹에 추가
+            channel_group_name = f"django_chat_channel_{channel_id}"
+            await self.channel_layer.group_add(channel_group_name, self.channel_name)
+            return
+        except Exception:
+            await self.close(code=4401)
+            return
+
     async def disconnect(self, close_code):
         try:
             if self.channel_layer:
@@ -67,9 +87,10 @@ class UserSocketConsumer(AsyncJsonWebsocketConsumer):
         try:
             send_channel_type = data.get("sendChannelType")
             if send_channel_type == "channel":
-                group_name, message_content = await save_message_by_channel(data)
+                message_content = await save_message_by_channel(data)
+                channel_name = f"django_chat_channel_{data.get('channel_id')}"
                 await self.send_message_by_channel(
-                    group_name, message_content, is_group=True
+                    channel_name, message_content, is_group=True
                 )
 
             elif send_channel_type == "direct":

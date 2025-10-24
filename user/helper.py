@@ -19,7 +19,6 @@ async def save_message_by_channel(data):
 
     # 전송할 채널 정보
     channel_id = data.get("channel_id")  # 채널 아이디
-    group_name = data.get("group_name")  # 장고 레디스 그룹 이름
 
     # 보낸사람 정보
     from_user_id = data.get("from_user_id")
@@ -36,7 +35,7 @@ async def save_message_by_channel(data):
         channel=channel_id,
     )
 
-    return group_name, message_content
+    return message_content
 
 
 async def save_message_to_user(data):
